@@ -76,7 +76,9 @@ Future<void> selectChapter(WebDriver driver, String number) async {
 }
 
 // Скачивание глав
-Future<void> downloadChapters(WebDriver driver, pw.Document doc, double last, int width, int height) async {
+Future<void> downloadChapters(WebDriver driver, String title, double last, int width, int height) async {
+  // Создание PDF дркумента
+  final pw.Document doc = pw.Document(author: 'Kvdl', title: title);
   while (true) {
     // По сути тут всё легко, но очень много действий в двух строках, мне лень делать много переменных
     final double currentChapter = double.parse((await (await (driver.findElements(const By.className('reader-header-action__title.text-truncate'))).toList())[1].text).split(' ')[3]);
@@ -92,7 +94,9 @@ Future<void> downloadChapters(WebDriver driver, pw.Document doc, double last, in
       driver.keyboard.sendKeys(Keyboard.right);
       currentPage+=1;
     }
-  }
+  }   
+  final file = File('$title.pdf');
+  await file.writeAsBytes(await doc.save());
 }
 
 // Скачивание изображения

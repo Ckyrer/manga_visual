@@ -1,11 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:manga_visual/manga_core.dart';
 import 'package:webdriver/async_core.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart';
 
 class InputerViewModel with ChangeNotifier {
 
@@ -43,12 +39,8 @@ class InputerViewModel with ChangeNotifier {
     _IS_DOWNLOADING = true;
 
     await selectChapter(browser, _CHAPTERS_RANGE.start.ceil().toString());
-    final pw.Document pdfFile = pw.Document(author: 'Kvdl', title: _MANGA_NAME);
 
-    downloadChapters(browser, pdfFile, _CHAPTERS_RANGE.end, 758, 1024);
-
-    final file = File('$_MANGA_NAME.pdf');
-    await file.writeAsBytes(await pdfFile.save());
+    downloadChapters(browser, _MANGA_NAME, _CHAPTERS_RANGE.end+1, 758, 1024);
 
     _IS_DOWNLOADING = false;
   }
