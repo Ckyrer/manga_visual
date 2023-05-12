@@ -6,7 +6,7 @@ import 'package:webdriver/async_io.dart';
 import 'package:http/http.dart' as http;
 import 'package:pdf/widgets.dart' as pw;
 
-String driverPath = "D:\\chromedriver\\chromedriver.exe";
+String driverPath = "chromedriver";
 
 // Создание драйвера и подключение к нему
 Future<WebDriver> startDriver() async {
@@ -18,7 +18,7 @@ Future<WebDriver> startDriver() async {
     }
   }
   Map<String, dynamic> caps = Capabilities.chrome;
-  // caps[Capabilities.chromeOptions] = {'args': ['--headless']};
+  caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox']};
 
   return await createDriver(desired: caps);
 }
