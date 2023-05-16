@@ -7,8 +7,11 @@ class URLInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(onChanged: (value) => {
-      context.read<InputerViewModel>().setNotSureURL(value)
-    });
+    return TextField(
+      onChanged: (value) => {
+        context.read<InputerViewModel>().setMangaURL(value)
+      },
+      enabled: (!context.watch<InputerViewModel>().getIsDownloading && !context.watch<InputerViewModel>().getIsProcessing),
+    );
   }
 }

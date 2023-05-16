@@ -16,12 +16,12 @@ class _ChaptersRangeState extends State<ChaptersRange> {
   Widget build(BuildContext context) {
     return RangeSlider(
       values: range, 
-      onChanged: (nRange) => {
-        if (!context.read<InputerViewModel>().isDownloading) {
-          setState(() => range = nRange),
-          context.read<InputerViewModel>().setChaptersRange(nRange)
-        }
-      },
+      onChanged: !context.watch<InputerViewModel>().getIsDownloading
+      ? (nRange) => {
+        setState(() => range = nRange),
+        context.read<InputerViewModel>().setChaptersRange(nRange)
+      }
+      : null,
       min: 1,
       max: context.watch<InputerViewModel>().getMaxChapter.ceil().toDouble(),
       divisions: context.watch<InputerViewModel>().getMaxChapter.ceil(),

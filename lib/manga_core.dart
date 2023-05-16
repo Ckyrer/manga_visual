@@ -6,7 +6,7 @@ import 'package:webdriver/async_io.dart';
 import 'package:http/http.dart' as http;
 import 'package:pdf/widgets.dart' as pw;
 
-String driverPath = "chromedriver";
+String driverPath = "D:\\chromedriver\\chromedriver.exe";
 
 // Создание драйвера и подключение к нему
 Future<WebDriver> startDriver() async {
@@ -18,7 +18,7 @@ Future<WebDriver> startDriver() async {
     }
   }
   Map<String, dynamic> caps = Capabilities.chrome;
-  caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox']};
+  caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox', '--headless']};
 
   return await createDriver(desired: caps);
 }
@@ -97,6 +97,8 @@ Future<void> downloadChapters(WebDriver driver, String title, double last, int w
   }   
   final file = File('$title.pdf');
   await file.writeAsBytes(await doc.save());
+
+  driver.get('data:,');
 }
 
 // Скачивание изображения

@@ -2,9 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:manga_visual/manga_core.dart';
-import 'package:manga_visual/views/ChaptersRange.dart';
-import 'package:manga_visual/views/Cover.dart';
-import 'package:manga_visual/views/URLInput.dart';
+import 'package:manga_visual/views/HomeScreen.dart';
 import 'package:provider/provider.dart';
 import 'package:webdriver/async_core.dart';
 
@@ -33,47 +31,8 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.amber,
         ),
-        home: const HomeWidget()
+        home: const HomeScreen()
       ),
     );
-  }
-}
-
-class HomeWidget extends StatelessWidget{
-  const HomeWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold (
-      body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Center(
-            child: Column(
-              children: [
-                const URLInput(),
-                ElevatedButton(
-                  onPressed: () => {
-                    if (!context.read<InputerViewModel>().isDownloading) {
-                      context.read<InputerViewModel>().changeImageUrl()
-                    }
-                  },
-                  child: const Text("Найти")
-                ),
-                Text(context.watch<InputerViewModel>().getMangaName),
-                const Cover(),
-                const ChaptersRange(),
-                ElevatedButton(
-                  onPressed: () => {
-                    if (!context.read<InputerViewModel>().isDownloading) {
-                      context.read<InputerViewModel>().startDownloading()
-                    }
-                  },
-                  child: const Text("Скачать")
-                )
-              ],
-            )
-          ),
-        ),
-      );
   }
 }
