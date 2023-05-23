@@ -1,70 +1,62 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:manga_visual/manga_core.dart';
-import 'package:webdriver/async_core.dart';
 
 class InputerViewModel with ChangeNotifier {
 
-  InputerViewModel({
-    required this.browser
-  });
-
-  final WebDriver browser;
-
-  String _IMAGE_URL = "https://i1.sndcdn.com/artworks-000003529677-qxmjmi-t500x500.jpg";
-  String _MANGA_URL = "";
-  String _MANGA_NAME = "None";
-  bool _IS_READY = false;
-  double _MAX_CHAPTER = 1;
-  RangeValues _CHAPTERS_RANGE = RangeValues(0, 0);
-  bool _IS_DOWNLOADING = false;
-  bool _IS_PROCESSING = false;
+  String _imageUrl = "https://i1.sndcdn.com/artworks-000003529677-qxmjmi-t500x500.jpg";
+  String _mangaName = "None";
+  bool _isReady = false;
+  double _maxChapter = 1;
+  RangeValues _chaptersRange = RangeValues(0, 0);
+  bool _isDownloading = false;
+  bool _isProcessing = false;
 
 
-  bool get getIsProcessing => _IS_PROCESSING;
-  bool get getIsDownloading => _IS_DOWNLOADING;
-  bool get getIsReady => _IS_READY;
-  String get getImageUrl => _IMAGE_URL;
-  double get getMaxChapter => _MAX_CHAPTER;
-  String get getMangaName => _MANGA_NAME;
+  bool get getIsProcessing => _isProcessing;
+  bool get getIsDownloading => _isDownloading;
+  bool get getIsReady => _isReady;
+  String get getImageUrl => _imageUrl;
+  double get getMaxChapter => _maxChapter;
+  String get getMangaName => _mangaName;
 
   void setChaptersRange(RangeValues v) {
-    _CHAPTERS_RANGE = v;
+    _chaptersRange = v;
   }
 
   void startDownloading() async {
-    _IS_DOWNLOADING = true;
-    _IS_READY = false;
+    _isDownloading = true;
+    _isReady = false;
     notifyListeners();
 
-    await selectChapter(browser, _CHAPTERS_RANGE.start.ceil().toString());
+    await MangaCore.selectChapter(_chaptersRange.start.ceil().toString());
 
-    await downloadChapters(browser, _MANGA_NAME, _CHAPTERS_RANGE.end+1, 758, 1024);
+    await MangaCore.downloadChapters(_mangaName, _chaptersRange.end+1, 758, 1024);
 
-    _IS_DOWNLOADING = false;
+    _isDownloading = false;
     notifyListeners();
   }
 
   void setMangaURL(String url) async {
     if (url.startsWith("https://mangalib.me/") && url.endsWith("?section=chapters")) {
-      _IS_PROCESSING = true;
+      _isProcessing = true;
       notifyListeners();
-      List res = await getManga(browser, url);
-      _IS_PROCESSING = false;
+      List res = await MangaCore.getManga(url);
+      _isProcessing = false;
       if (res[0]) {
-        _IS_READY = true;
-        _MANGA_NAME = res[1];
-        _IMAGE_URL = res[3];
-        _MAX_CHAPTER = res[4];
+        _isReady = true;
+        _mangaName = res[1];
+        _imageUrl = res[3];
+        _maxChapter = res[4];
       } else {
-        _IS_READY = false;
-        _MANGA_NAME = "None";
-        _IMAGE_URL = "https://i1.sndcdn.com/artworks-000003529677-qxmjmi-t500x500.jpg";
+        _isReady = false;
+        _mangaName = "None";
+        _imageUrl = "https://i1.sndcdn.com/artworks-000003529677-qxmjmi-t500x500.jpg";
       }
     } else {
-      _IS_READY = false;
-      _MANGA_NAME = "None";
-      _IMAGE_URL = "https://i1.sndcdn.com/artworks-000003529677-qxmjmi-t500x500.jpg";
+      _isReady = false;
+      _mangaName = "None";
+      _imageUrl = "https://i1.sndcdn.com/artworks-000003529677-qxmjmi-t500x500.jpg";
     }
     notifyListeners();
   }
