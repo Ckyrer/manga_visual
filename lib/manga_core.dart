@@ -7,11 +7,11 @@ import 'package:http/http.dart' as http;
 import 'package:pdf/widgets.dart' as pw;
 
 class MangaCore {
-  static late final WebDriver driver;
+  static WebDriver? driver;
   static const String driverPath = "D:\\chromedriver\\chromedriver.exe";
 
   // Создание драйвера и подключение к нему
-  static void startDriver() async {
+  static Future<void> startDriver() async {
     Process chromeDriverProcess = await Process.start(driverPath, ['--port=4444', '--url-base=wd/hub']);
     await for (String browserOut in const LineSplitter().bind(utf8.decoder.bind(chromeDriverProcess.stdout))) {
       // Это для Linux --> if (browserOut.contains('Starting ChromeDriver')) {
@@ -20,9 +20,20 @@ class MangaCore {
       }
     }
     Map<String, dynamic> caps = Capabilities.chrome;
-    caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox', '--headless']};
+    // caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox', '--headless']};
 
-    driver = await createDriver(desired: caps);
+    driver =  await createDriver(desired: caps);
+  }
+
+  static Future<WebElement> waitForElement(WebElement root, By by) async {
+    while (true) {
+      try {
+        await root.findElement(by);
+        return await root.findElement(by);
+      } on NoSuchElementException {
+        continue;
+      }
+    }
   }
 
   // Найти мангу
@@ -31,15 +42,15 @@ class MangaCore {
       return [false];
     }
     try {
-      await driver.get(url);
-      if (await driver.title=='Страница не найдена 404') {return [false];}
+      await driver!.get(url);
+      if (await driver!.title=='Страница не найдена 404') {return [false];}
       else {
         return [
           true,
-          await (await driver.findElement(const By.className('media-name__main'))).text, // Название
-          await (await driver.findElement(const By.className('media-name__alt'))).text, // Альт. название.
-          await (await driver.findElement(const By.cssSelector('.media-sidebar__cover > img'))).attributes['src'], // Обложка
-          double.parse((await (await driver.findElement(const By.className('link-default'))).text).trim().split(' ')[3]) // Последняя глава
+          await (await driver!.findElement(const By.className('media-name__main'))).text, // Название
+          await (await driver!.findElement(const By.className('media-name__alt'))).text, // Альт. название.
+          await (await driver!.findElement(const By.cssSelector('.media-sidebar__cover > img'))).attributes['src'], // Обложка
+          double.parse((await (await driver!.findElement(const By.className('link-default'))).text).trim().split(' ')[3]) // Последняя глава
         ];
       }
     } catch (e) {
@@ -48,12 +59,25 @@ class MangaCore {
   }
 
   // Поиск нужной главы
-  static Future<void> selectChapter(String number) async {
+  static Future<bool> selectChapter(String number) async {
+
+    // Проверка на возрастное ограничение
+    try {
+      await driver!.findElement(const By.id("title-caution"));
+      print("Возрастное ограничени! Вход в аккаунт...");
+      if ( !(await login("Ckyrer", "Kachmala2")) ) {
+        print("Неверный логин или пароль!");
+        return false;
+      }
+    } on NoSuchElementException {
+      print("Нет ограничений");
+    }
+
     // <div> всех глав
-    final WebElement chaptersDiv = await driver.findElement(const By.className('vue-recycle-scroller__item-wrapper'));
+    final WebElement chaptersDiv = await driver!.findElement(const By.className('vue-recycle-scroller__item-wrapper'));
 
     // <body>
-    final WebElement body = await driver.findElement(const By.tagName('body')); 
+    final WebElement body = await driver!.findElement(const By.tagName('body')); 
 
     int height = int.parse(await body.properties['scrollHeight']??'0');
     m: while (height>0) {
@@ -72,9 +96,10 @@ class MangaCore {
       }
 
       // Прогрузка следующих глав
-      driver.execute('scrollTo(0, scrollY+1200)', []);
+      driver!.execute('scrollTo(0, scrollY+1200)', []);
       height-=1000; // Примерно на таком расстоянии прогружаются новые главы, а большинство предыдущих очищаются
-    } 
+    }
+    return true;
   }
 
   // Скачивание глав
@@ -83,28 +108,43 @@ class MangaCore {
     final pw.Document doc = pw.Document(author: 'Kvdl', title: title);
     while (true) {
       // По сути тут всё легко, но очень много действий в двух строках, мне лень делать много переменных
-      final double currentChapter = double.parse((await (await (driver.findElements(const By.className('reader-header-action__title.text-truncate'))).toList())[1].text).split(' ')[3]);
+      final double currentChapter = double.parse((await (await (driver!.findElements(const By.className('reader-header-action__title.text-truncate'))).toList())[1].text).split(' ')[3]);
       // Проверка на то, что глава еще находится в нужном диапозоне
       if (currentChapter > last) {break;}
       // Ещё одна сложная строка
-      final int pagesAmount = int.parse((await (await driver.findElement(const By.className('button.reader-pages__label.reader-footer__btn'))).text).split(' ')[3]);
+      final int pagesAmount = int.parse((await (await driver!.findElement(const By.className('button.reader-pages__label.reader-footer__btn'))).text).split(' ')[3]);
       int currentPage = 1;
       while (currentPage<=pagesAmount) {
         // Получение ссылки на изображение
-        final String img = (await (await (await driver.findElement(const By.className('reader-view__container'))).findElements(const By.tagName('img')).toList())[currentPage-1].properties['src'])??'';
+        final String img = (await (await (await driver!.findElement(const By.className('reader-view__container'))).findElements(const By.tagName('img')).toList())[currentPage-1].properties['src'])??'';
         await _addPageToPDF(doc, await _downloadImage(img), width.toDouble(), height.toDouble());
-        driver.keyboard.sendKeys(Keyboard.right);
+        driver!.keyboard.sendKeys(Keyboard.right);
         currentPage+=1;
       }
     }   
     final file = File('$title.pdf');
     await file.writeAsBytes(await doc.save());
 
-    driver.get('data:,');
+    driver!.get('data:,');
+  }
+
+  static Future<bool> login(String name, String password) async {
+    WebElement frame =  await driver!.findElement(const By.id("title-caution"));
+    await (await frame.findElement(const By.className("button_block"))).click();
+
+    await (await driver!.findElement(const By.name("email"))).sendKeys(name);
+    await (await driver!.findElement(const By.name("password"))).sendKeys(password);
+    await (await driver!.findElement(const By.className("control__indicator"))).click();
+    await (await driver!.findElement(const By.className("button"))).click();
+
+    if (await driver!.title=='Авторизация') {
+      return false;
+    }
+    return true;
   }
 
   // Скачивание изображения
-   static Future<Uint8List> _downloadImage(String url) async {
+  static Future<Uint8List> _downloadImage(String url) async {
     return (await http.get(Uri.parse(url))).bodyBytes;
   }
 

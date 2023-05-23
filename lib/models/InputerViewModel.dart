@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:manga_visual/manga_core.dart';
 
@@ -8,7 +7,7 @@ class InputerViewModel with ChangeNotifier {
   String _mangaName = "None";
   bool _isReady = false;
   double _maxChapter = 1;
-  RangeValues _chaptersRange = RangeValues(0, 0);
+  RangeValues _chaptersRange = const RangeValues(0, 0);
   bool _isDownloading = false;
   bool _isProcessing = false;
 
@@ -29,9 +28,13 @@ class InputerViewModel with ChangeNotifier {
     _isReady = false;
     notifyListeners();
 
-    await MangaCore.selectChapter(_chaptersRange.start.ceil().toString());
+    bool s = await MangaCore.selectChapter(_chaptersRange.start.ceil().toString());
 
-    await MangaCore.downloadChapters(_mangaName, _chaptersRange.end+1, 758, 1024);
+    if (s) {
+      await MangaCore.downloadChapters(_mangaName, _chaptersRange.end+1, 758, 1024);
+    } else {
+      
+    }
 
     _isDownloading = false;
     notifyListeners();
