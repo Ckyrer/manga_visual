@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'models/InputerViewModel.dart';
 
 void main() async {
-  await MangaCore.startDriver();
+  await MangaCore.init();
   (await MangaCore.driver!.window).setRect(const Rectangle(0, 0, 800, 900));
   runApp(const MyApp());
 }

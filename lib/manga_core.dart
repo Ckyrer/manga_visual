@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:manga_visual/models/InputerViewModel.dart';
 import 'package:pdf/pdf.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webdriver/async_io.dart';
 import 'package:http/http.dart' as http;
 import 'package:pdf/widgets.dart' as pw;
@@ -11,7 +13,7 @@ class MangaCore {
   static const String driverPath = "D:\\chromedriver\\chromedriver.exe";
 
   // Создание драйвера и подключение к нему
-  static Future<void> startDriver() async {
+  static Future<void> init() async {
     Process chromeDriverProcess = await Process.start(driverPath, ['--port=4444', '--url-base=wd/hub']);
     await for (String browserOut in const LineSplitter().bind(utf8.decoder.bind(chromeDriverProcess.stdout))) {
       // Это для Linux --> if (browserOut.contains('Starting ChromeDriver')) {
@@ -20,11 +22,13 @@ class MangaCore {
       }
     }
     Map<String, dynamic> caps = Capabilities.chrome;
-    // caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox', '--headless']};
+    caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox', '--headless'], 'detach': true};
 
     driver =  await createDriver(desired: caps);
   }
 
+
+  // Ждать до прогрузки элемента (может пригодится) 
   static Future<WebElement> waitForElement(WebElement root, By by) async {
     while (true) {
       try {
@@ -64,8 +68,11 @@ class MangaCore {
     // Проверка на возрастное ограничение
     try {
       await driver!.findElement(const By.id("title-caution"));
-      print("Возрастное ограничени! Вход в аккаунт...");
-      if ( !(await login("Ckyrer", "Kachmala2")) ) {
+      print("Возрастное ограничение! Вход в аккаунт...");
+
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+      if ( !(await login(prefs.getString("username")??"", prefs.getString("password")??"")) ) {
         print("Неверный логин или пароль!");
         return false;
       }
@@ -103,18 +110,22 @@ class MangaCore {
   }
 
   // Скачивание глав
-  static Future<void> downloadChapters(String title, double last, int width, int height) async {
+  static Future<void> downloadChapters(InputerViewModel inp, String title, double last, int width, int height) async {
     // Создание PDF дркумента
     final pw.Document doc = pw.Document(author: 'Kvdl', title: title);
     while (true) {
       // По сути тут всё легко, но очень много действий в двух строках, мне лень делать много переменных
-      final double currentChapter = double.parse((await (await (driver!.findElements(const By.className('reader-header-action__title.text-truncate'))).toList())[1].text).split(' ')[3]);
+      String label = await (await (driver!.findElements(const By.className('reader-header-action__title.text-truncate'))).toList())[1].text;
+      final double currentChapter = double.parse((label).split(' ')[3]);
       // Проверка на то, что глава еще находится в нужном диапозоне
       if (currentChapter > last) {break;}
       // Ещё одна сложная строка
       final int pagesAmount = int.parse((await (await driver!.findElement(const By.className('button.reader-pages__label.reader-footer__btn'))).text).split(' ')[3]);
       int currentPage = 1;
       while (currentPage<=pagesAmount) {
+        // Обновление счётчика
+        inp.setCurrentPage("$label $currentPage/$pagesAmount");
+        
         // Получение ссылки на изображение
         final String img = (await (await (await driver!.findElement(const By.className('reader-view__container'))).findElements(const By.tagName('img')).toList())[currentPage-1].properties['src'])??'';
         await _addPageToPDF(doc, await _downloadImage(img), width.toDouble(), height.toDouble());
@@ -128,7 +139,10 @@ class MangaCore {
     driver!.get('data:,');
   }
 
-  static Future<bool> login(String name, String password) async {
+  // Вход в аккаунт
+  static Future<bool> login(String? name, String? password) async {
+    if (name==null || password==null) {return false;}
+
     WebElement frame =  await driver!.findElement(const By.id("title-caution"));
     await (await frame.findElement(const By.className("button_block"))).click();
 
@@ -138,6 +152,7 @@ class MangaCore {
     await (await driver!.findElement(const By.className("button"))).click();
 
     if (await driver!.title=='Авторизация') {
+      await driver!.get("data:,");
       return false;
     }
     return true;

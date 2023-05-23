@@ -5,6 +5,8 @@ import 'package:manga_visual/views/widgets/Cover.dart';
 import 'package:manga_visual/views/widgets/URLInput.dart';
 import 'package:provider/provider.dart';
 
+import 'LoginScreen.dart';
+
 
 class HomeScreen extends StatelessWidget{
   const HomeScreen({super.key});
@@ -12,27 +14,36 @@ class HomeScreen extends StatelessWidget{
   @override
   Widget build(BuildContext context) {
     return Scaffold (
-      body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Center(
-            child: Column(
-              children: [
-                const URLInput(),
-                Text(context.watch<InputerViewModel>().getMangaName),
-                const Cover(),
-                const ChaptersRange(),
-                ElevatedButton(
-                  onPressed: context.watch<InputerViewModel>().getIsReady
-                  ? () => {
-                    context.read<InputerViewModel>().startDownloading()
-                  }
-                  : null,
-                  child: const Text("Скачать")
-                )
-              ],
+      body: Center(
+        child: Column(
+          children: [
+            ElevatedButton(
+              onPressed: !context.watch<InputerViewModel>().getIsDownloading
+              ? () => {
+                context.read<InputerViewModel>().loadUserData(),
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => const LoginScreen()))
+              }
+              : null,
+              child: const Text("Поменять логин и пароль")
+            ),
+            const SizedBox(height:10),
+            const URLInput(),
+            const SizedBox(height:10),
+            Text(context.watch<InputerViewModel>().getMangaName),
+            const Cover(),
+            const ChaptersRange(),
+            Text(context.watch<InputerViewModel>().getCurrentPage),
+            ElevatedButton(
+              onPressed: context.watch<InputerViewModel>().getIsReady
+              ? () => {
+                context.read<InputerViewModel>().startDownloading(context.read<InputerViewModel>())
+              }
+              : null,
+              child: const Text("Скачать")
             )
-          ),
-        ),
-      );
+          ]
+        )
+      )
+    );
   }
 }

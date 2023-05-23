@@ -8,6 +8,10 @@ class URLInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        label: Text("URL")
+      ),
       onChanged: (value) => {
         context.read<InputerViewModel>().setMangaURL(value)
       },
