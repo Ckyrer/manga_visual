@@ -69,10 +69,10 @@ class InputerViewModel with ChangeNotifier {
   }
 
   void setMangaURL(String url) async {
-    if (url.startsWith("https://mangalib.me/") && url.endsWith("?section=chapters")) {
+    if (url.startsWith("https://mangalib.me/")) {
       _isProcessing = true;
       notifyListeners();
-      List res = await MangaCore.getManga(url);
+      List res = await MangaCore.getManga(url.replaceFirst("?section=info", "?section=chapters"));
       _isProcessing = false;
       if (res[0]) {
         _isReady = true;

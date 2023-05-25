@@ -22,7 +22,7 @@ class MangaCore {
       }
     }
     Map<String, dynamic> caps = Capabilities.chrome;
-    caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox', '--headless'], 'detach': true};
+    // caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox', '--headless'], 'detach': true};
 
     driver =  await createDriver(desired: caps);
   }
@@ -42,9 +42,7 @@ class MangaCore {
 
   // Найти мангу
   static Future<List> getManga(String url) async {
-    if (url=="" || !url.startsWith("https://mangalib.me/")) {
-      return [false];
-    }
+
     try {
       await driver!.get(url);
       if (await driver!.title=='Страница не найдена 404') {return [false];}
@@ -152,7 +150,8 @@ class MangaCore {
     await (await driver!.findElement(const By.className("button"))).click();
 
     if (await driver!.title=='Авторизация') {
-      await driver!.get("data:,");
+      await driver!.back();
+      await driver!.back();
       return false;
     }
     return true;
