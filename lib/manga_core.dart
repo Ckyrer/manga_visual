@@ -22,7 +22,7 @@ class MangaCore {
       }
     }
     Map<String, dynamic> caps = Capabilities.chrome;
-    // caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox', '--headless'], 'detach': true};
+    caps[Capabilities.chromeOptions] = {'args': ['--no-sandbox', '--headless'], 'detach': true};
 
     driver =  await createDriver(desired: caps);
   }
