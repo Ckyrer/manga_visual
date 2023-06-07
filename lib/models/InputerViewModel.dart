@@ -3,7 +3,6 @@ import 'package:manga_visual/manga_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class InputerViewModel with ChangeNotifier {
-
   String _imageUrl = "https://i1.sndcdn.com/artworks-000003529677-qxmjmi-t500x500.jpg";
   String _mangaName = "None";
   bool _isReady = false;
@@ -26,8 +25,8 @@ class InputerViewModel with ChangeNotifier {
   String get getCurrentPage => _curPage;
 
   void loadUserData() async {
-    _username = (await SharedPreferences.getInstance()).getString("username")??"";
-    _password = (await SharedPreferences.getInstance()).getString("password")??"";
+    _username = (await SharedPreferences.getInstance()).getString("username") ?? "";
+    _password = (await SharedPreferences.getInstance()).getString("password") ?? "";
   }
 
   void setName(String name) async {
@@ -57,7 +56,7 @@ class InputerViewModel with ChangeNotifier {
     bool s = await MangaCore.selectChapter(_chaptersRange.start.ceil().toString());
 
     if (s) {
-      await MangaCore.downloadChapters(i, _mangaName, _chaptersRange.end+1, 758, 1024);
+      await MangaCore.downloadChapters(i, _mangaName, _chaptersRange.end.ceilToDouble(), 758, 1024);
       _curPage = "Загрузка завершена!";
     } else {
       _curPage = "Ошибка! Неверный логин или пароль";

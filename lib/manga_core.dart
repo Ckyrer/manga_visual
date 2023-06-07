@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:image/image.dart';
 import 'package:manga_visual/models/InputerViewModel.dart';
 import 'package:pdf/pdf.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,7 +11,7 @@ import 'package:pdf/widgets.dart' as pw;
 
 class MangaCore {
   static WebDriver? driver;
-  static const String driverPath = "D:\\chromedriver\\chromedriver.exe";
+  static const String driverPath = "/home/kvdl/Programms/chromedriver";
 
   // Создание драйвера и подключение к нему
   static Future<void> init() async {
@@ -22,7 +23,7 @@ class MangaCore {
     }
     Map<String, dynamic> caps = Capabilities.chrome;
     caps[Capabilities.chromeOptions] = {
-      'args': ['--no-sandbox', '--headless'],
+      // 'args': ['--no-sandbox', '--headless'],
       'detach': true
     };
 
@@ -111,8 +112,13 @@ class MangaCore {
   // Скачивание глав
   static Future<void> downloadChapters(InputerViewModel inp, String title, double last, int width, int height) async {
     // Создание PDF дркумента
-    final pw.Document doc = pw.Document(author: 'Kvdl', title: title);
+    final pw.Document doc = pw.Document(author: 'Mangalib', title: title);
     while (true) {
+      // Проверка на то, что мы всё еще не дочитали всю мангу
+      if ((await driver!.currentUrl).endsWith("?section=info")) {
+        break;
+      }
+
       // По сути тут всё легко, но очень много действий в двух строках, мне лень делать много переменных
       String label = await (await (driver!.findElements(const By.className('reader-header-action__title.text-truncate'))).toList())[1].text;
       final double currentChapter = double.parse((label).split(' ')[3]);
@@ -121,19 +127,16 @@ class MangaCore {
         break;
       }
       // Ещё одна сложная строка
-      final int pagesAmount =
-          int.parse((await (await driver!.findElement(const By.className('button.reader-pages__label.reader-footer__btn'))).text).split(' ')[3]);
+      final int pagesAmount = int.parse((await (await driver!.findElement(const By.className('button.reader-pages__label.reader-footer__btn'))).text).split(' ')[2]);
       int currentPage = 1;
       while (currentPage <= pagesAmount) {
         // Обновление счётчика
         inp.setCurrentPage("$label $currentPage/$pagesAmount");
 
         // Получение ссылки на изображение
-        final String img = (await (await (await driver!.findElement(const By.className('reader-view__container')))
-                    .findElements(const By.tagName('img'))
-                    .toList())[currentPage - 1]
-                .properties['src']) ??
-            '';
+        final String img =
+            (await (await (await driver!.findElement(const By.className('reader-view__container'))).findElements(const By.tagName('img')).toList())[currentPage - 1].properties['src']) ?? '';
+
         await _addPageToPDF(doc, await _downloadImage(img), width.toDouble(), height.toDouble());
         driver!.keyboard.sendKeys(Keyboard.right);
         currentPage += 1;
@@ -174,7 +177,12 @@ class MangaCore {
 
   // Добавление страницы в PDF
   static Future<void> _addPageToPDF(pw.Document doc, Uint8List img, double width, double height) async {
-    final image = pw.MemoryImage(img);
+    pw.MemoryImage image = pw.MemoryImage(img);
+    if (image.width! > image.height!) {
+      Image im = decodeImage(img)!;
+      image = pw.MemoryImage(encodePng(copyRotate(im, angle: 270)));
+    }
+
     doc.addPage(pw.Page(
         build: (pw.Context context) {
           return pw.Center(child: pw.Image(image));
