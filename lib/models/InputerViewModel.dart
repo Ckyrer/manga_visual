@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:manga_visual/manga_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +25,11 @@ class InputerViewModel with ChangeNotifier {
   String get getName => _username;
   String get getPassword => _password;
   String get getCurrentPage => _curPage;
+
+  void quit() {
+    MangaCore.exit();
+    exit(0);
+  }
 
   void loadUserData() async {
     _username = (await SharedPreferences.getInstance()).getString("username") ?? "";
@@ -60,9 +67,9 @@ class InputerViewModel with ChangeNotifier {
       _curPage = "Загрузка завершена!";
     } else {
       _curPage = "Ошибка! Неверный логин или пароль";
-      _isReady = true;
     }
 
+    _isReady = true;
     _isDownloading = false;
     notifyListeners();
   }

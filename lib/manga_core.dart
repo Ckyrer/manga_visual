@@ -11,20 +11,20 @@ import 'package:pdf/widgets.dart' as pw;
 
 class MangaCore {
   static WebDriver? driver;
-  static const String driverPath = "/home/kvdl/Programms/chromedriver";
+  static Process? chromedriver;
+  static const String driverPath = "./chromedriver";
 
   // Создание драйвера и подключение к нему
   static Future<void> init() async {
-    Process chromeDriverProcess = await Process.start(driverPath, ['--port=4444', '--url-base=wd/hub']);
-    await for (String browserOut in const LineSplitter().bind(utf8.decoder.bind(chromeDriverProcess.stdout))) {
+    Process chromedriver = await Process.start(driverPath, ['--port=4444', '--url-base=wd/hub']);
+    await for (String browserOut in const LineSplitter().bind(utf8.decoder.bind(chromedriver.stdout))) {
       if (browserOut.contains('Starting ChromeDriver')) {
         break;
       }
     }
     Map<String, dynamic> caps = Capabilities.chrome;
     caps[Capabilities.chromeOptions] = {
-      // 'args': ['--no-sandbox', '--headless'],
-      'detach': true
+      'args': ['--headless']
     };
 
     driver = await createDriver(desired: caps);
@@ -64,6 +64,9 @@ class MangaCore {
 
   // Поиск нужной главы
   static Future<bool> selectChapter(String number) async {
+    if (number == "0") {
+      number = "1";
+    }
     // Проверка на возрастное ограничение
     try {
       await driver!.findElement(const By.id("title-caution"));
@@ -111,7 +114,11 @@ class MangaCore {
 
   // Скачивание глав
   static Future<void> downloadChapters(InputerViewModel inp, String title, double last, int width, int height) async {
+    if (last == 0.0) {
+      last = 1.0;
+    }
     // Создание PDF дркумента
+    final String homePage = (await (await driver!.findElement(const By.className("reader-header-action.reader-header-action_full"))).attributes["href"])!;
     final pw.Document doc = pw.Document(author: 'Mangalib', title: title);
     while (true) {
       // Проверка на то, что мы всё еще не дочитали всю мангу
@@ -127,7 +134,7 @@ class MangaCore {
         break;
       }
       // Ещё одна сложная строка
-      final int pagesAmount = int.parse((await (await driver!.findElement(const By.className('button.reader-pages__label.reader-footer__btn'))).text).split(' ')[2]);
+      final int pagesAmount = int.parse((await (await driver!.findElement(const By.className('button.reader-pages__label.reader-footer__btn'))).text).split(' ')[3]);
       int currentPage = 1;
       while (currentPage <= pagesAmount) {
         // Обновление счётчика
@@ -145,7 +152,7 @@ class MangaCore {
     final file = File('$title.pdf');
     await file.writeAsBytes(await doc.save());
 
-    driver!.get('data:,');
+    driver!.get(homePage);
   }
 
   // Вход в аккаунт
@@ -188,5 +195,10 @@ class MangaCore {
           return pw.Center(child: pw.Image(image));
         },
         pageFormat: PdfPageFormat(width, height)));
+  }
+
+  static Future<void> exit() async {
+    await driver!.quit();
+    chromedriver!.kill();
   }
 }
