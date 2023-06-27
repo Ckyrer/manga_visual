@@ -24,10 +24,19 @@ class MangaCore {
     }
     Map<String, dynamic> caps = Capabilities.chrome;
     caps[Capabilities.chromeOptions] = {
-      'args': ['--headless']
+      // 'args': ['--headless']
     };
 
     driver = await createDriver(desired: caps);
+  }
+
+  // Есть ли элемент на странице
+  static Future<WebElement?> isElementExist(By by) async {
+    try {
+      return await driver!.findElement(by);
+    } on NoSuchElementException {
+      return null;
+    }
   }
 
   // Ждать до прогрузки элемента (может пригодится)
@@ -42,22 +51,38 @@ class MangaCore {
     }
   }
 
-  // Найти мангу
-  static Future<List> getManga(String url) async {
+  // Найти мангу/ранобэ
+  static Future<List> getMR(String url) async {
     try {
       await driver!.get(url);
       if (await driver!.title == 'Страница не найдена 404') {
         return [false];
       } else {
-        return [
-          true,
-          await (await driver!.findElement(const By.className('media-name__main'))).text, // Название
-          await (await driver!.findElement(const By.className('media-name__alt'))).text, // Альт. название.
-          await (await driver!.findElement(const By.cssSelector('.media-sidebar__cover > img'))).attributes['src'], // Обложка
-          double.parse((await (await driver!.findElement(const By.className('link-default'))).text).trim().split(' ')[3]) // Последняя глава
-        ];
+        if (url.startsWith("https://mangalib.me/")) {
+          return [
+            true,
+            await (await driver!.findElement(const By.className('media-name__main'))).text, // Название
+            await (await driver!.findElement(const By.className('media-name__alt'))).text, // Альт. название.
+            await (await driver!.findElement(const By.cssSelector('.media-sidebar__cover > img'))).attributes['src'], // Обложка
+            double.parse((await (await driver!.findElement(const By.className('link-default'))).text).trim().split(' ')[3]), // Последняя глава
+            1
+          ];
+        } else {
+          WebElement? list = await isElementExist(const By.className("media-chapters-teams"));
+          if (list != null) {
+            await (await list.findElement(const By.className("team-list-item"))).click();
+          }
+          return [
+            await (await driver!.findElement(const By.className('media-name__main'))).text, // Название
+            await (await driver!.findElement(const By.className('media-name__alt'))).text, // Альт. название.
+            await (await driver!.findElement(const By.cssSelector('.media-sidebar__cover > img'))).attributes['src'], // Обложка
+            double.parse((await (await driver!.findElement(const By.className('link-default'))).text).trim().split(' ')[3]), // Последняя глава
+            2
+          ];
+        }
       }
     } catch (e) {
+      print(e);
       return [false];
     }
   }
@@ -67,8 +92,8 @@ class MangaCore {
     if (number == "0") {
       number = "1";
     }
-    // Проверка на возрастное ограничение
-    try {
+
+    if (await isElementExist(const By.id("title-caution")) != null) {
       await driver!.findElement(const By.id("title-caution"));
       print("Возрастное ограничение! Вход в аккаунт...");
 
@@ -78,7 +103,7 @@ class MangaCore {
         print("Неверный логин или пароль!");
         return false;
       }
-    } on NoSuchElementException {
+    } else {
       print("Нет ограничений");
     }
 
@@ -113,13 +138,19 @@ class MangaCore {
   }
 
   // Скачивание глав
-  static Future<void> downloadChapters(InputerViewModel inp, String title, double last, int width, int height) async {
+  static Future<void> downloadMangaChapters(InputerViewModel inp, String title, double last, int width, int height) async {
+    // Чтобы не было проблем с rangevalue
     if (last == 0.0) {
       last = 1.0;
     }
-    // Создание PDF дркумента
+
+    // Запоминаем ссылку на главную страницу манги
     final String homePage = (await (await driver!.findElement(const By.className("reader-header-action.reader-header-action_full"))).attributes["href"])!;
+
+    // Создание PDF документа (Для манги)
     final pw.Document doc = pw.Document(author: 'Mangalib', title: title);
+
+    // Главный цикл
     while (true) {
       // Проверка на то, что мы всё еще не дочитали всю мангу
       if ((await driver!.currentUrl).endsWith("?section=info")) {
@@ -129,12 +160,14 @@ class MangaCore {
       // По сути тут всё легко, но очень много действий в двух строках, мне лень делать много переменных
       String label = await (await (driver!.findElements(const By.className('reader-header-action__title.text-truncate'))).toList())[1].text;
       final double currentChapter = double.parse((label).split(' ')[3]);
+
       // Проверка на то, что глава еще находится в нужном диапозоне
       if (currentChapter > last) {
         break;
       }
       // Ещё одна сложная строка
       final int pagesAmount = int.parse((await (await driver!.findElement(const By.className('button.reader-pages__label.reader-footer__btn'))).text).split(' ')[3]);
+
       int currentPage = 1;
       while (currentPage <= pagesAmount) {
         // Обновление счётчика
@@ -197,6 +230,7 @@ class MangaCore {
         pageFormat: PdfPageFormat(width, height)));
   }
 
+  // Выход
   static Future<void> exit() async {
     await driver!.quit();
     chromedriver!.kill();

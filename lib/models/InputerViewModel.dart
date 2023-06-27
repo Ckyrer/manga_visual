@@ -15,6 +15,7 @@ class InputerViewModel with ChangeNotifier {
   String _username = "";
   String _password = "";
   static String _curPage = "";
+  int mode = -1;
 
   bool get getIsProcessing => _isProcessing;
   bool get getIsDownloading => _isDownloading;
@@ -38,12 +39,10 @@ class InputerViewModel with ChangeNotifier {
 
   void setName(String name) async {
     (await SharedPreferences.getInstance()).setString("username", name);
-    _username = name;
   }
 
   void setPassword(String password) async {
     (await SharedPreferences.getInstance()).setString("password", password);
-    _password = password;
   }
 
   void setCurrentPage(String page) {
@@ -63,7 +62,7 @@ class InputerViewModel with ChangeNotifier {
     bool s = await MangaCore.selectChapter(_chaptersRange.start.ceil().toString());
 
     if (s) {
-      await MangaCore.downloadChapters(i, _mangaName, _chaptersRange.end.ceilToDouble(), 758, 1024);
+      await MangaCore.downloadMangaChapters(i, _mangaName, _chaptersRange.end.ceilToDouble(), 758, 1024);
       _curPage = "Загрузка завершена!";
     } else {
       _curPage = "Ошибка! Неверный логин или пароль";
@@ -75,16 +74,18 @@ class InputerViewModel with ChangeNotifier {
   }
 
   void setMangaURL(String url) async {
-    if (url.startsWith("https://mangalib.me/")) {
+    if (url.startsWith("https://mangalib.me/") || url.startsWith("https://ranobelib.me/")) {
       _isProcessing = true;
       notifyListeners();
-      List res = await MangaCore.getManga(url.replaceFirst("?section=info", "?section=chapters"));
+      List res = await MangaCore.getMR(url.replaceFirst("?section=info", "?section=chapters"));
       _isProcessing = false;
+      print(res);
       if (res[0]) {
         _isReady = true;
         _mangaName = res[1];
         _imageUrl = res[3];
         _maxChapter = res[4];
+        mode = res[5];
       } else {
         _isReady = false;
         _mangaName = "None";
