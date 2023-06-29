@@ -4,31 +4,39 @@ import 'package:flutter/material.dart';
 import 'package:manga_visual/manga_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../ranobe_core.dart';
+import '../webdriver_core.dart';
+
 class InputerViewModel with ChangeNotifier {
   String _imageUrl = "https://i1.sndcdn.com/artworks-000003529677-qxmjmi-t500x500.jpg";
-  String _mangaName = "None";
+  String _titleName = "None";
+  int _mode = -1;
+
+  String _firstChapter = "";
+  String _lastChapter = "";
+  final List<DropdownMenuItem<int>> _chaptersList = [];
+
   bool _isReady = false;
-  double _maxChapter = 1;
-  RangeValues _chaptersRange = const RangeValues(0, 0);
   bool _isDownloading = false;
   bool _isProcessing = false;
+
   String _username = "";
   String _password = "";
+
   static String _curPage = "";
-  int mode = -1;
 
   bool get getIsProcessing => _isProcessing;
   bool get getIsDownloading => _isDownloading;
   bool get getIsReady => _isReady;
   String get getImageUrl => _imageUrl;
-  double get getMaxChapter => _maxChapter;
-  String get getMangaName => _mangaName;
+  String get getTitleName => _titleName;
   String get getName => _username;
   String get getPassword => _password;
   String get getCurrentPage => _curPage;
+  List<DropdownMenuItem<int>> get getChaptersList => _chaptersList;
 
   void quit() {
-    MangaCore.exit();
+    WDC.exit();
     exit(0);
   }
 
@@ -50,8 +58,14 @@ class InputerViewModel with ChangeNotifier {
     notifyListeners();
   }
 
-  void setChaptersRange(RangeValues v) {
-    _chaptersRange = v;
+  void setFirstChapter(int c) {
+    final child = _chaptersList[c].child.toString();
+    _firstChapter = child.substring(6, child.length - 2);
+  }
+
+  void setLastChapter(int c) {
+    final child = _chaptersList[c].child.toString();
+    _lastChapter = child.substring(6, child.length - 2);
   }
 
   void startDownloading(InputerViewModel i) async {
@@ -59,14 +73,19 @@ class InputerViewModel with ChangeNotifier {
     _isReady = false;
     notifyListeners();
 
-    bool s = await MangaCore.selectChapter(_chaptersRange.start.ceil().toString());
-
-    if (s) {
-      await MangaCore.downloadMangaChapters(i, _mangaName, _chaptersRange.end.ceilToDouble(), 758, 1024);
-      _curPage = "Загрузка завершена!";
+    if (_mode == 0) {
+      await MangaCore.selectChapter(_firstChapter);
     } else {
-      _curPage = "Ошибка! Неверный логин или пароль";
+      await RanobeCore.selectChapter(_firstChapter);
     }
+
+    if (_mode == 0) {
+      await MangaCore.downloadChapters(i, _titleName, _lastChapter, 758, 1024);
+    } else {
+      await RanobeCore.downloadChapters(i, _titleName, _lastChapter, 758, 1024, _titleName, _imageUrl);
+    }
+
+    _curPage = "Загрузка завершена!";
 
     _isReady = true;
     _isDownloading = false;
@@ -77,23 +96,36 @@ class InputerViewModel with ChangeNotifier {
     if (url.startsWith("https://mangalib.me/") || url.startsWith("https://ranobelib.me/")) {
       _isProcessing = true;
       notifyListeners();
-      List res = await MangaCore.getMR(url.replaceFirst("?section=info", "?section=chapters"));
-      _isProcessing = false;
-      print(res);
-      if (res[0]) {
-        _isReady = true;
-        _mangaName = res[1];
-        _imageUrl = res[3];
-        _maxChapter = res[4];
-        mode = res[5];
+      List res;
+      if (url.startsWith("https://mangalib.me/")) {
+        _mode = 0;
+        res = await MangaCore.getManga(url.replaceFirst("?section=info", "?section=chapters"));
       } else {
-        _isReady = false;
-        _mangaName = "None";
+        _mode = 1;
+        res = await RanobeCore.getRanobe(url.replaceFirst("?section=info", "?section=chapters"));
+      }
+      _isProcessing = false;
+      if (res[0] == 1) {
+        _isReady = true;
+        _titleName = res[1];
+        _imageUrl = res[3];
+
+        _chaptersList.clear();
+        res[4].asMap().forEach((i, v) => {_chaptersList.add(DropdownMenuItem(value: i, child: Text(v)))});
+      } else {
+        _titleName = "None";
         _imageUrl = "https://i1.sndcdn.com/artworks-000003529677-qxmjmi-t500x500.jpg";
+        _chaptersList.clear();
+        _isReady = false;
+        if (res[0] == -1) {
+          _curPage = "Неверный логин или пароль";
+          print("Неверный логин или пароль!");
+        }
       }
     } else {
+      _chaptersList.clear();
       _isReady = false;
-      _mangaName = "None";
+      _titleName = "None";
       _imageUrl = "https://i1.sndcdn.com/artworks-000003529677-qxmjmi-t500x500.jpg";
     }
     notifyListeners();

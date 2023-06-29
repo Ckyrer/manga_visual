@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+    <description>
+        <title-info>
+            {HERE GENRES}
+            <author>
+                <nickname>{HERE AUTHOR}</nickname>
+            </author>
+            <book-title>{HERE TITLE NAME}</book-title>
+            <annotation>{HERE DESCRIPTION}</annotation>
+            <coverpage><image l:href="#cover.png"/></coverpage>
+            <lang>ru</lang>
+        </title-info>
+
+        <document-info>
+            <author>Kvdl</author>
+            <program-used>Manga visual</program-used>
+            <date>29.06.23</date>
+            <id>{HERE ID}</id>
+            <version>1.0</version>
+        </document-info>
+    </description>
+    <body>
+        <section>
+            <title>{HERE CHAPTER NAME}</title>
+            
+        </section>
+
+    </body>
+</FictionBook>
